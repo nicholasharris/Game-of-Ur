@@ -1,4 +1,4 @@
-/////// Constants //////////
+///////---------------- Constants ---------------------- ////////
 CANVAS_WIDTH = 1000;
 CANVAS_HEIGHT = 800;
 
@@ -8,13 +8,17 @@ WHITE_PIECE_Y_LOCATIONS = [737.5, 687.5, 637.5 , 587.5, 537.5, 487.5, 437.5, 437
 BLACK_PIECE_X_LOCATIONS = [362.5, 362.5, 362.5, 362.5, 362.5, 362.5, 362.5, 287.5, 287.5, 287.5, 287.5, 212.5, 212.5, 212.5, 212.5, 212.5, 212.5, 212.5, 212.5, 287.5, 287.5];
 BLACK_PIECE_Y_LOCATIONS = [737.5, 687.5, 637.5 , 587.5, 537.5, 487.5, 437.5, 437.5, 512.5, 587.5, 662.5, 662.5, 587.5, 512.5, 437.5, 362.5, 287.5, 212.5, 137.5, 137.5, 212.5];
 
+NUM_PIECES_EACH = 7;
+
 CURRENT_PLAYER = 0;
 BUTTON_LOCK = false;
 MOVE_FINISH_FLAG = false;
 DOUBLE_TURN_FLAG = false;
 ////////////////////////////
 
-/////// Classes ///////////////////////////
+///////---------------- Classes ---------------------- ////////
+
+//Class for black and white game pieces/stones
 class ur_piece
 {
     constructor(color, position)
@@ -69,6 +73,7 @@ class ur_piece
     }
 }
 
+// Class for game dice
 class die
 {
     constructor(position_x, position_y)
@@ -202,6 +207,7 @@ class die
 }
 
 
+//class for highlight object to show legal moves
 class square_highlight
 {
     constructor(x, y, width)
@@ -232,6 +238,7 @@ class square_highlight
     }
 }
 
+//Class to distinguish player
 class player
 {
     constructor(type)
@@ -242,7 +249,7 @@ class player
 
 ///////////////////////////////////////////
 
-/////// Functions, etc. ////////////////////
+///////---------------- Functions, etc. ------------------//////////
 var myGameArea = 
 {
     canvas : document.createElement("canvas"),
@@ -258,11 +265,11 @@ var myGameArea =
 
       //initialize game piece objects
       pieces = [];
-      for(var i = 0 ; i < 7; i++)
+      for(var i = 0 ; i < NUM_PIECES_EACH; i++)
       {
           pieces.push(new ur_piece(0, i)); //white pieces
       }
-      for(var i = 0 ; i < 7; i++)
+      for(var i = 0 ; i < NUM_PIECES_EACH; i++)
       {
           pieces.push(new ur_piece(1, i)); //black pieces
       }
@@ -426,6 +433,7 @@ function isInsidePiece(pos, piece)
     return pos.x > piece.piece_x_locations[piece.position] - piece.width/2 && pos.x < piece.piece_x_locations[piece.position] + piece.width/2 && pos.y < piece.piece_y_locations[piece.position]+piece.height/2 && pos.y > piece.piece_y_locations[piece.position]-piece.height/2;
 }
 
+// Class for clickable area to roll the dice
 class roll_rect
 {
     constructor()
@@ -446,15 +454,23 @@ class roll_rect
         context.lineTo(this.x + this.width/2, this.y + this.height/2);
         context.lineTo(this.x - this.width/2, this.y + this.height/2);
         context.lineTo(this.x - this.width/2, this.y - this.height/2);
-        if (this.enabled == true)
-        {
-            context.strokeStyle = 'rgba(80, 20, 20, 1)';
-            context.fillStyle = 'rgba(180, 90, 70, 1)';
-        }
-        else
+        if (this.enabled == false)
         {
             context.strokeStyle = 'rgba(80, 80, 80, 1)';
             context.fillStyle = 'rgba(100, 100, 100, 1)';
+        }
+        else if (CURRENT_PLAYER == 0) // White's move
+        {
+            //context.strokeStyle = 'rgba(80, 20, 20, 1)';
+            //context.fillStyle = 'rgba(180, 90, 70, 1)';
+
+            context.strokeStyle = 'rgba(80, 80, 80, 1)';
+            context.fillStyle = 'rgba(255, 255, 255, 1)';
+        }
+        else //Black's move
+        {
+            context.strokeStyle = 'rgba(80, 80, 80, 1)';
+            context.fillStyle = 'rgba(30, 30, 30, 1)';
         }
 
         context.stroke();
@@ -462,13 +478,17 @@ class roll_rect
 
         //text
         context.font = "35px Arial";
-        if(this.enabled == true)
-        {
-            context.fillStyle = 'rgba(80, 20, 20, 1)';
-        }
-        else
+        if(this.enabled == false)
         {
             context.fillStyle = 'rgba(80, 80, 80, 1)';
+        }
+        else if (CURRENT_PLAYER == 0) // White's move
+        {
+            context.fillStyle = 'rgba(0, 0, 0, 1)';
+        }
+        else // Black's move
+        {
+            context.fillStyle = 'rgba(240, 240, 240, 1)';
         }
         
         context.textAlign = "center";
@@ -477,9 +497,11 @@ class roll_rect
 
 }
 
-//////// Functions to handle turns by human/computer players ///////////
+////////-------------- Functions to handle turns by human/computer players ------------------ ///////////
+
 function highlight_legal_pieces(roll)
 {
+    var legal_count = 0;
     for(var i = 0; i < pieces.length; i++)
     {
         if (pieces[i].color == CURRENT_PLAYER && pieces[i].position >= 6)
@@ -487,6 +509,7 @@ function highlight_legal_pieces(roll)
             if(pieces[i].position + roll == WHITE_PIECE_X_LOCATIONS.length)
             {
                 pieces[i].highlighted = true;
+                legal_count += 1;
                 //console.log("piece highlighted | color: " + pieces[i].color.toString(10) + " | position: " + pieces[i].position.toString(10) + " | locations length: " + WHITE_PIECE_X_LOCATIONS.length.toString(10) + " | position + roll: " + (pieces[i].position + roll).toString(10));
 
             }
@@ -499,16 +522,23 @@ function highlight_legal_pieces(roll)
                     {
                         spot_occupied = true;
                     }
+                    else if (pieces[j].position == pieces[i].position + roll && pieces[j].color != pieces[i].color && pieces[j].position == 14)
+                    {
+                        spot_occupied = true;
+                    }
                 }
 
                 if(spot_occupied == false)
                 {
                     pieces[i].highlighted = true;
+                    legal_count += 1;
                     //console.log("piece highlighted | color: " + pieces[i].color.toString(10) + " | position: " + pieces[i].position.toString(10) + " | locations length: " + WHITE_PIECE_X_LOCATIONS.length.toString(10) + " | position + roll: " + (pieces[i].position + roll).toString(10));
                 }
             }
         }
     }
+
+    return legal_count;
 }
 
 function check_selected_pieces()
@@ -524,6 +554,7 @@ function check_selected_pieces()
     return false;
 }
 
+// Function to handle knocking an opponent's piece off the board
 function knock(piece)
 {
     var index = 6;
@@ -551,6 +582,7 @@ function knock(piece)
     
 }
 
+// Function to adjust friendly pieces after one has moved
 function move_up_friendly_pieces(piece)
 {
     var move_needed = true;
@@ -574,6 +606,7 @@ function move_up_friendly_pieces(piece)
     }
 }
 
+// Function to handle game turns
 function handle_game_turn()
 {
     if (players[CURRENT_PLAYER].type == 0) //if the current player is a human
@@ -586,7 +619,7 @@ function handle_game_turn()
         
         execute_human_turn();
     }
-    else
+    else  // if the player is the computer
     {
         execute_computer_turn();
     }
@@ -594,7 +627,60 @@ function handle_game_turn()
     //CURRENT_PLAYER = (CURRENT_PLAYER + 1) %  2;  //change the current player for next turn
 }
 
+// Function to check if one player has won and the game is over
+function check_game_over()
+{
+    var white_count = 0;
+    var black_count = 0;
+    for (var i = 0; i < pieces.length; i++ )
+    {
+        if (pieces[i].color == 0)
+        {
+            white_count += 1;
+        }
+        else
+        {
+            black_count += 1;
+        }
+    }
 
+    if (white_count == 0)
+    {
+        return 0; //signifying white has won
+    }
+    else if (black_count == 0)
+    {
+        return 1;  //signifying black has won
+    }
+    else
+    {
+        // Nobody has won
+        return -1;
+    }
+}
+
+//function to set the canvas to a game over screen once the game is won
+function game_finish_screen(winner, cntx)
+{
+    BUTTON_LOCK = true;
+    //text
+    cntx.font = "40px Arial";
+    cntx.strokeStyle = 'rgba(80, 20, 20, 1)';
+    cntx.textAlign = "center";
+    
+    //context.fillStyle = 'rgba(180, 90, 70, 1)';
+
+    if (winner == 0)  // White won
+    {
+        cntx.fillText("White Wins!", 700, 600); 
+    }
+    else  // black won
+    {
+        cntx.fillText("Black Wins!", 700, 600); 
+    }
+}
+
+// function to handle human turns
 function execute_human_turn()
 {
 
@@ -609,7 +695,22 @@ function execute_human_turn()
 
         if (MOVE_FINISH_FLAG == true)
         {
+            //Check if game is over
+            if (check_game_over() == 0)
+            {
+                //game_finish_screen(0);  //white victory
+                return;
+            }
+            else if (check_game_over() == 1) 
+            {
+               //game_finish_screen(1); //Black victory
+                return;
+            }
+
+
             CURRENT_PLAYER = (CURRENT_PLAYER + 1) %  2;  //change the current player for next turn
+
+            
 
             if(DOUBLE_TURN_FLAG == true)
             {
@@ -624,10 +725,15 @@ function execute_human_turn()
         }
         else if (check_selected_pieces() == false)
         {
-            highlight_legal_pieces(roll);
-        }
+            var num_legal_moves = highlight_legal_pieces(roll);
 
-      
+            if(num_legal_moves == 0)
+            {
+                CURRENT_PLAYER = (CURRENT_PLAYER + 1) %  2;  //change the current player for next turn
+                BUTTON_LOCK = false;
+                return;
+            }
+        }
     }
 
 }
@@ -638,7 +744,7 @@ function execute_computer_turn()
 }
 //////////////////////////////////////////////////////////////////////
 
-////// render function ///
+////// render board ///
 function render_board()
 {
     var canvas = document.getElementById("canvas");
@@ -843,6 +949,14 @@ function render_board()
   ctx.stroke();
   ///////////////////////////////////
 
+  if (check_game_over() == 0)  //white wins
+  {
+      game_finish_screen(0, ctx);
+  }
+  else if (check_game_over() == 1)  //Black wins
+  {
+      game_finish_screen(1, ctx);
+  }
 }
 
 
@@ -865,7 +979,7 @@ function game_loop()
 
 
 
-////////////////// "main" content ////////////////////////////////////////
+////////////////// main initialization ////////////////////////////////////////
 myGameArea.start();
 window.requestAnimationFrame(game_loop);  //launches game- and rendering-loop
 //////////////////////////////////////////////////////////////////////////
