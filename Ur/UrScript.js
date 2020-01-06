@@ -8,70 +8,24 @@ WHITE_PIECE_Y_LOCATIONS = [737.5, 687.5, 637.5 , 587.5, 537.5, 487.5, 437.5, 437
 BLACK_PIECE_X_LOCATIONS = [362.5, 362.5, 362.5, 362.5, 362.5, 362.5, 362.5, 287.5, 287.5, 287.5, 287.5, 212.5, 212.5, 212.5, 212.5, 212.5, 212.5, 212.5, 212.5, 287.5, 287.5];
 BLACK_PIECE_Y_LOCATIONS = [737.5, 687.5, 637.5 , 587.5, 537.5, 487.5, 437.5, 437.5, 512.5, 587.5, 662.5, 662.5, 587.5, 512.5, 437.5, 362.5, 287.5, 212.5, 137.5, 137.5, 212.5];
 
+WHITE_FINISH_X = 137.5;
+WHITE_FINISH_Y = 287.5;
+
+BLACK_FINISH_X = 287.5;
+BLACK_FINISH_Y = 287.5;
+
 NUM_PIECES_EACH = 7;
 
 CURRENT_PLAYER = 0;
 BUTTON_LOCK = false;
 MOVE_FINISH_FLAG = false;
 DOUBLE_TURN_FLAG = false;
+
+COMPUTER_TURN_DELAY = 1; //Number of milliseconds between computer's actions 
+COMPUTER_WIN_PROB = 0.0;
 ////////////////////////////
 
 ///////---------------- Classes ---------------------- ////////
-
-//Class for black and white game pieces/stones
-class ur_piece
-{
-    constructor(color, position)
-    {
-        this.color = color;
-        this.position = position;
-        this.highlighted = false;
-        this.selected = false;
-        this.radius = 22;
-
-        this.width = this.radius*2;
-        this.height = this.radius*2;
-
-
-        if (this.color == 0) //0 signifying white pieces
-        {
-            this.piece_x_locations = WHITE_PIECE_X_LOCATIONS;
-            this.piece_y_locations = WHITE_PIECE_Y_LOCATIONS;
-
-            this.stroke_style = "rgba(180, 180, 180, 1)";
-            this.fillStyle = "rgba(240, 240, 240, 1)";
-        }
-        else
-        {
-            this.piece_x_locations = BLACK_PIECE_X_LOCATIONS;
-            this.piece_y_locations = BLACK_PIECE_Y_LOCATIONS;
-
-            this.stroke_style = "rgba(20, 20, 20, 1)";
-            this.fillStyle = "rgba(40, 40, 40, 1)";
-        }
-    }
-    render(context)
-    {
-        context.beginPath();
-        context.arc(this.piece_x_locations[this.position], this.piece_y_locations[this.position], this.radius, 0 ,Math.PI*2);
-        context.lineWidth = 3;
-        context.strokeStyle = this.stroke_style;
-        context.fillStyle = this.fillStyle;
-        context.stroke();
-        context.fill();
-
-        if (this.highlighted == true)
-        {
-            context.beginPath();
-            context.arc(this.piece_x_locations[this.position], this.piece_y_locations[this.position], this.radius + 4, 0 ,Math.PI*2);
-            context.lineWidth = 3;
-            context.strokeStyle = "rgba(200, 200, 20, 0.3)";
-            context.fillStyle = "rgba(200, 200, 20, 0.3)";
-            context.stroke();
-            context.fill();
-        }
-    }
-}
 
 // Class for game dice
 class die
@@ -250,6 +204,29 @@ class player
 ///////////////////////////////////////////
 
 ///////---------------- Functions, etc. ------------------//////////
+
+// roll the drawn game dice on the board
+function roll_game_dice()
+{
+    for(var i = 0; i < dice.length; i++)
+    {
+        dice[i].roll();
+    } 
+
+    roll_button.enabled = false;
+
+    roll = 0;
+    for (var i = 0; i < dice.length; i++)
+    {
+        if (dice[i].corner_states[1] == 1)
+        {
+            roll++;
+        }
+    }
+
+    return roll;
+}
+
 var myGameArea = 
 {
     canvas : document.createElement("canvas"),
@@ -261,7 +238,7 @@ var myGameArea =
       this.canvas.style = "border:1px solid #000000";
       this.canvas.parentElement = "parent";
       this.context = this.canvas.getContext("2d");
-      document.body.insertBefore(this.canvas, document.body.childNodes[2]);
+      document.body.insertBefore(this.canvas, document.body.childNodes[4]);
 
       //initialize game piece objects
       pieces = [];
@@ -290,28 +267,16 @@ var myGameArea =
       //initialize roll button
       roll_button = new roll_rect();
 
+      //initialize points to illustrate computer's moves
+      motion_points = [];
+
       /// initialize roll button functionality //////
         // Binding the click event on the canvas
         this.canvas.addEventListener('click', function(evt) {
             var mousePos = getMousePos(canvas, evt);
-            if (isInside(mousePos,roll_button) && roll_button.enabled == true) {
-                   
-                for(var i = 0; i < dice.length; i++)
-                {
-                    dice[i].roll();
-                } 
-
-                roll_button.enabled = false;
-
-                roll = 0;
-                for (var i = 0; i < dice.length; i++)
-                {
-                    if (dice[i].corner_states[1] == 1)
-                    {
-                        roll++;
-                    }
-                }
-                   
+            if (isInside(mousePos,roll_button) && roll_button.enabled == true) 
+            {
+                roll = roll_game_dice();          
             }
             else if (check_selected_pieces() == false)
             {
@@ -406,7 +371,7 @@ var myGameArea =
       //initialize players
       players = [];
       players.push(new player(0));  //0 signifies human player
-      players.push(new player(0));
+      players.push(new player(1));
 
 
     }
@@ -497,8 +462,73 @@ class roll_rect
 
 }
 
+// Class for clickable area to roll the dice
+class player_rect
+{
+    constructor()
+    {
+        this.x = 690;
+        this.y = 200;
+        this.width = 200;
+        this.height = 70;
+        this.enabled = true;
+    }
+
+    render(context)
+    {
+        context.beginPath();
+        context.lineWidth = 6
+        context.moveTo(this.x - this.width/2, this.y - this.height/2);
+        context.lineTo(this.x + this.width/2, this.y - this.height/2);
+        context.lineTo(this.x + this.width/2, this.y + this.height/2);
+        context.lineTo(this.x - this.width/2, this.y + this.height/2);
+        context.lineTo(this.x - this.width/2, this.y - this.height/2);
+        if (this.enabled == false)
+        {
+            context.strokeStyle = 'rgba(80, 80, 80, 1)';
+            context.fillStyle = 'rgba(100, 100, 100, 1)';
+        }
+        else if (CURRENT_PLAYER == 0) // White's move
+        {
+            //context.strokeStyle = 'rgba(80, 20, 20, 1)';
+            //context.fillStyle = 'rgba(180, 90, 70, 1)';
+
+            context.strokeStyle = 'rgba(80, 80, 80, 1)';
+            context.fillStyle = 'rgba(255, 255, 255, 1)';
+        }
+        else //Black's move
+        {
+            context.strokeStyle = 'rgba(80, 80, 80, 1)';
+            context.fillStyle = 'rgba(30, 30, 30, 1)';
+        }
+
+        context.stroke();
+        context.fill();
+
+        //text
+        context.font = "35px Arial";
+        if(this.enabled == false)
+        {
+            context.fillStyle = 'rgba(80, 80, 80, 1)';
+        }
+        else if (CURRENT_PLAYER == 0) // White's move
+        {
+            context.fillStyle = 'rgba(0, 0, 0, 1)';
+        }
+        else // Black's move
+        {
+            context.fillStyle = 'rgba(240, 240, 240, 1)';
+        }
+        
+        context.textAlign = "center";
+        context.fillText("ROLL", this.x, this.y + 12); 
+    }
+
+}
+
 ////////-------------- Functions to handle turns by human/computer players ------------------ ///////////
 
+//highlights the pieces which are legal to move (for the human player)
 function highlight_legal_pieces(roll)
 {
     var legal_count = 0;
@@ -539,6 +569,43 @@ function highlight_legal_pieces(roll)
     }
 
     return legal_count;
+}
+
+//returns an array of indices of all the pieces which are legal to move (for the computer player)
+function calculate_legal_pieces(roll)
+{
+    var legal_pieces = [];
+    for(var i = 0; i < pieces.length; i++)
+    {
+        if (pieces[i].color == CURRENT_PLAYER && pieces[i].position >= 6)
+        {
+            if(pieces[i].position + roll == WHITE_PIECE_X_LOCATIONS.length)
+            {
+                legal_pieces.push(i);
+            }
+            else if(pieces[i].position + roll < WHITE_PIECE_X_LOCATIONS.length )
+            {
+                var spot_occupied = false;
+                for(var j = 0; j < pieces.length; j++)
+                {
+                    if (pieces[j].position == pieces[i].position + roll && pieces[j].color == pieces[i].color)
+                    {
+                        spot_occupied = true;
+                    }
+                    else if (pieces[j].position == pieces[i].position + roll && pieces[j].color != pieces[i].color && pieces[j].position == 14)
+                    {
+                        spot_occupied = true;
+                    }
+                }
+
+                if(spot_occupied == false)
+                {
+                    legal_pieces.push(i);
+                }
+            }
+        }
+    }
+    return legal_pieces;
 }
 
 function check_selected_pieces()
@@ -609,6 +676,18 @@ function move_up_friendly_pieces(piece)
 // Function to handle game turns
 function handle_game_turn()
 {
+   //Check select tag to see if human/computer player has been toggled
+   var player2_selection = document.getElementById('Player2Select').value;
+   console.log(player2_selection);
+   if(player2_selection == "Human")
+   {
+       players[1].type = 0;
+   }
+   else
+   {
+       players[1].type = 1;
+   }
+
     if (players[CURRENT_PLAYER].type == 0) //if the current player is a human
     {
         if(BUTTON_LOCK == false)
@@ -621,6 +700,12 @@ function handle_game_turn()
     }
     else  // if the player is the computer
     {
+        //if(BUTTON_LOCK == false)
+        //{
+        roll_button.enabled = true;
+        //}
+        render_board();
+        sleep(COMPUTER_TURN_DELAY);
         execute_computer_turn();
     }
 
@@ -686,6 +771,7 @@ function execute_human_turn()
 
     if(roll_button.enabled == false)
     {
+        motion_points = [];
         if (roll == 0)
         {
             CURRENT_PLAYER = (CURRENT_PLAYER + 1) %  2;  //change the current player for next turn
@@ -738,9 +824,107 @@ function execute_human_turn()
 
 }
 
+// To sleep for a set amount of milliseconds (To make a small pause between computer's actions)
+function sleep(milliseconds) 
+{
+    const date = Date.now();
+    let currentDate = null;
+    do {
+      currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
+  }
+
+// Handle turn by the AI including calling Monte Carlo and handling effects on the game board
 function execute_computer_turn()
 {
+    roll_button.enabled = true;
+    render_board();
+    roll = roll_game_dice();
+    render_board();
 
+    motion_points = [];
+    
+    var legal_moves = calculate_legal_pieces(roll);
+
+    if (legal_moves.length > 0)
+    {
+        //chose the move to play
+        COMPUTER_WIN_PROB = 0.0;
+        best_index = 0;
+        var result = MonteCarloEvaluate(pieces, roll, CURRENT_PLAYER, CURRENT_PLAYER, 20000, 0);  //Use Monte Carlo Tree Search to select move
+        console.log(result);
+        selected_piece = pieces[legal_moves[result[1]]];
+        selected_index = legal_moves[result[1]];
+
+        COMPUTER_WIN_PROB = result[2];
+
+        //Mark motion points for human to visualize
+        if (CURRENT_PLAYER == 0)
+        {
+            motion_points.push([WHITE_PIECE_X_LOCATIONS[selected_piece.position], WHITE_PIECE_Y_LOCATIONS[selected_piece.position]]);
+            if(selected_piece.position + roll < WHITE_PIECE_X_LOCATIONS.length)
+            {
+                motion_points.push([WHITE_PIECE_X_LOCATIONS[selected_piece.position + roll], WHITE_PIECE_Y_LOCATIONS[selected_piece.position + roll]]);
+            }
+            else
+            {
+                motion_points.push([WHITE_FINISH_X, WHITE_FINISH_Y]);
+            }
+            
+            
+        }
+        else
+        {
+            motion_points.push([BLACK_PIECE_X_LOCATIONS[selected_piece.position], BLACK_PIECE_Y_LOCATIONS[selected_piece.position]]);
+            if(selected_piece.position + roll < BLACK_PIECE_X_LOCATIONS.length)
+            {
+                motion_points.push([BLACK_PIECE_X_LOCATIONS[selected_piece.position + roll], BLACK_PIECE_Y_LOCATIONS[selected_piece.position + roll]]);
+            }
+            else
+            {
+                motion_points.push([BLACK_FINISH_X, BLACK_FINISH_Y]);
+            }
+        }
+
+        //Play the selected move and handle all necessary effects on the board
+        if(selected_piece.position + roll < WHITE_PIECE_X_LOCATIONS.length)
+        {
+            //remove opposing piece if it is there
+            for(var j = 0 ; j < pieces.length; j++)
+            {
+                if(pieces[j].position == selected_piece.position + roll && pieces[j].color != selected_piece.color && pieces[j].position > 10 && pieces[j].position <= 18)
+                {
+                    knock(pieces[j]);
+                }
+            }
+
+            selected_piece.position += roll;
+
+            if (selected_piece.position == 10 || selected_piece.position == 14 || selected_piece.position == 20)
+            {
+                DOUBLE_TURN_FLAG = true;
+            }
+            move_up_friendly_pieces(selected_piece);
+        }
+        else
+        {
+            pieces.splice(selected_index, 1); //remove finishing piece
+        }
+    }
+
+    render_board();
+    sleep(COMPUTER_TURN_DELAY);
+
+    CURRENT_PLAYER = (CURRENT_PLAYER + 1) %  2;  //change the current player for next turn
+    BUTTON_LOCK = false;
+
+    if(DOUBLE_TURN_FLAG == true)
+    {
+        CURRENT_PLAYER = (CURRENT_PLAYER + 1) %  2;
+        DOUBLE_TURN_FLAG = false;
+        sleep(COMPUTER_TURN_DELAY);
+    }
+    return;
 }
 //////////////////////////////////////////////////////////////////////
 
@@ -949,6 +1133,28 @@ function render_board()
   ctx.stroke();
   ///////////////////////////////////
 
+  //Draw points of computer's motion if it just moved
+  if (motion_points.length > 0)
+  {
+    ctx.beginPath();
+    ctx.lineWidth = 4;
+    ctx.moveTo(motion_points[0][0], motion_points[0][1]);
+    ctx.lineTo(motion_points[1][0], motion_points[1][1]);
+    ctx.strokeStyle =  "rgba(255, 20, 20, 1)";
+    ctx.stroke();
+  }
+
+  //Draw the computer win probability
+  ctx.beginPath();
+  ctx.font = "30px Arial";
+   ctx.fillStyle = 'rgba(80, 20, 20, 1)';
+   ctx.textAlign = "center";
+   var formatted_prob = COMPUTER_WIN_PROB*100;
+   formatted_prob = formatted_prob.toFixed(3);
+   ctx.fillText("Computer's Chance of Victory: " + formatted_prob.toString(10) + "%", 700, 100);
+   ctx.stroke();
+   ctx.fill();
+
   if (check_game_over() == 0)  //white wins
   {
       game_finish_screen(0, ctx);
@@ -963,14 +1169,11 @@ function render_board()
 //////// Game loop ///////
 function game_loop()
 {
-
    //render board
    render_board();
 
-   //// Conduct player turns by making computer move / awaiting human's move //////////
+   //// Conduct player turns by making computer move or awaiting human's move //////////
    handle_game_turn();
-  
-
   
   //do it again
   window.requestAnimationFrame(game_loop);
