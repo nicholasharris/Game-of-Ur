@@ -5,4 +5,4 @@ A javascript/browser implementation of an ancient Sumerian game called the Royal
 
 A great description of the game (including the rules) can be found in this video from The British Museum: https://www.youtube.com/watch?v=WZskjLq040I . It is the oldest board game for which we know the original rules by which it was played. It was played as far back as 2600 BC. It is a kind of racing game that combines elements of skill and chance. 
 
-TO RUN: just open the index.html file to run the game in your browser. Tested in Firefox. The computer player's moves may take several seconds depending on the speed of your computer.
+TO RUN: just open the index.html file to run the game in your browser (must have all the other .js files in the same directory). Tested in Firefox. The computer player's moves may take several seconds depending on the speed of your computer.
